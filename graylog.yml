@@ -49,7 +49,7 @@ services:
         constraints:
           - node.hostname == ${NODE_3}
   opensearch1:
-    image: "opensearchproject/opensearch:2.4.0"
+    image: "opensearchproject/opensearch:2.6.0"
     hostname: "opensearch1"
     environment:
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
