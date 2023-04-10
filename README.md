@@ -8,7 +8,7 @@ mv .env.example .env
 ```
 3. Build graylog docker swarm stack
 ```shell
-export $(cat .env) > /dev/null 2>&1; docker stack deploy --compose-file docker-compose.yml overlay
+export $(cat .env) > /dev/null 2>&1; docker stack deploy --compose-file gitlab.yml overlay
 ```
 3. Init master node mongodb
 ```shell
