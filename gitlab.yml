@@ -1,0 +1,212 @@
+version: "3.8"
+
+services:
+  mongodb1:
+    image: "mongo:5.0"
+    hostname: "mongodb1"
+    command: mongod --replSet rs1
+    volumes:
+      - "mongodb-data-01:/data/db"
+      - "mongo-config-1:/data/configdb"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy: 
+      replicas: 1
+      placement: 
+        constraints: 
+          - node.hostname == ${NODE_1}
+
+  mongodb2:
+    image: "mongo:5.0"
+    hostname: "mongodb2"
+    command: mongod --replSet rs1
+    volumes:
+      - "mongodb-data-02:/data/db"
+      - "mongo-config-2:/data/configdb"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_2}
+
+  mongodb3:
+    image: "mongo:5.0"
+    hostname: "mongodb3"
+    command: mongod --replSet rs1
+    volumes:
+      - "mongodb-data-03:/data/db"
+      - "mongo-config-3:/data/configdb"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_3}
+  opensearch1:
+    image: "opensearchproject/opensearch:2.4.0"
+    hostname: "opensearch1"
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.name=opensearch1
+      - cluster.name=os-docker-cluster
+      - discovery.seed_hosts=opensearch1,opensearch2
+      - cluster.initial_cluster_manager_nodes=opensearch1,opensearch2
+      - bootstrap.memory_lock=true
+      - plugins.security.ssl.http.enabled=false
+      - plugins.security.disabled=true
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - "opensearch-data-01:/usr/share/opensearch/data"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_2}
+
+  opensearch2:
+    image: "opensearchproject/opensearch:2.6.0"
+    hostname: "opensearch2"
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - node.name=opensearch1
+      - cluster.name=os-docker-cluster
+      - discovery.seed_hosts=opensearch1,opensearch2
+      - cluster.initial_cluster_manager_nodes=opensearch1,opensearch2
+      - bootstrap.memory_lock=true
+      - plugins.security.ssl.http.enabled=false
+      - plugins.security.disabled=true
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - "opensearch-data-02:/usr/share/opensearch/data"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_3}
+  cerebro:
+    image: yannart/cerebro:latest
+    ports:
+      - 5001:9000
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_1}
+
+  graylog1:
+    image: "${GRAYLOG_IMAGE:-graylog/graylog:5.0}"
+    hostname: "graylog1"
+    depends_on:
+      - "mongodb1"
+      - "mongodb2"
+      - "mongodb3"
+      - "opensearch1"
+      - "opensearch2"
+    entrypoint: "/docker-entrypoint.sh"
+    environment:
+      GRAYLOG_PASSWORD_SECRET: "hth5QL5cCLo51A7TQGiTZLjSfBLqhduqvZI2h0vj77QSo8W4IcU9cfOOdqvdMTplzkU0oB6sIXXC2Ah4DBVPiuHNkH4sPgQx"
+      GRAYLOG_ROOT_PASSWORD_SHA2: "13495ea7eaa06c178023416e14c12b9fca2236eb1c83097662d3ad626cc60904"
+      GRAYLOG_HTTP_EXTERNAL_URI: "http://0.0.0.0:9000/"
+      GRAYLOG_HTTP_PUBLISH_URI: http://graylog1:9000/
+      GRAYLOG_ELASTICSEARCH_HOSTS: "http://opensearch1:9200,http://opensearch2:9200"
+      GRAYLOG_MONGODB_URI: "mongodb://mongodb1:27017,mongodb2:27017,mongodb3:27017/graylog?replicaSet=rs1"
+    ports:
+      - "9000:9000"        # Graylog web interface and REST API
+      - "1514:1514"        # Syslog TCP
+      - "1514:1514/udp"    # Syslog UDP
+      - "12201:12201"      # GELF TCP
+      - "12201:12201/udp"  # GELF UDP
+    volumes:
+      - "graylog-data-01:/usr/share/graylog/data/data"
+      - "graylog-journal-01:/usr/share/graylog/data/journal"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_2}
+
+  graylog2:
+    image: "${GRAYLOG_IMAGE:-graylog/graylog:5.0}"
+    hostname: "graylog2"
+    depends_on:
+      - "mongodb1"
+      - "mongodb2"
+      - "mongodb3"
+      - "opensearch1"
+      - "opensearch2"
+      - "graylog1"
+    entrypoint: "/docker-entrypoint.sh"
+    environment:
+      GRAYLOG_IS_MASTER: "false"
+      GRAYLOG_PASSWORD_SECRET: "hth5QL5cCLo51A7TQGiTZLjSfBLqhduqvZI2h0vj77QSo8W4IcU9cfOOdqvdMTplzkU0oB6sIXXC2Ah4DBVPiuHNkH4sPgQx"
+      GRAYLOG_ROOT_PASSWORD_SHA2: "13495ea7eaa06c178023416e14c12b9fca2236eb1c83097662d3ad626cc60904"
+      GRAYLOG_HTTP_EXTERNAL_URI: "http://0.0.0.0:9000/"
+      #GRAYLOG_HTTP_BIND_ADDRESS: "0.0.0.0:9001"
+      GRAYLOG_HTTP_PUBLISH_URI: http://graylog2:9000/
+      GRAYLOG_ELASTICSEARCH_HOSTS: "http://opensearch1:9200,http://opensearch2:9200"
+      GRAYLOG_MONGODB_URI: "mongodb://mongodb1:27017,mongodb2:27017,mongodb3:27017/graylog?replicaSet=rs1"
+    ports:
+      - "9001:9001"         # Graylog web interface and REST API
+      - "1515:1514"         # Syslog TCP
+      - "1515:1514/udp"     # Syslog UDP
+      - "12202:12201"       # GELF TCP
+      - "12202:12201/udp"   # GELF UDP
+    volumes:
+      - "graylog-data-02:/usr/share/graylog/data/data"
+      - "graylog-journal-02:/usr/share/graylog/data/journal"
+    restart: "on-failure"
+    networks:
+      - my-net
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ${NODE_3}   
+
+volumes:
+  opensearch-data-01:
+  opensearch-data-02:
+  graylog-data-01:
+  graylog-data-02:
+  graylog-journal-01:
+  graylog-journal-02:
+  mongodb-data-01:
+  mongodb-data-02:
+  mongodb-data-03:
+  mongo-config-1:
+  mongo-config-2:
+  mongo-config-3:
+networks: 
+  my-net:
+    driver: overlay
+    attachable: true
+    name: overlay
