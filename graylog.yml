@@ -170,16 +170,15 @@ services:
       GRAYLOG_PASSWORD_SECRET: "hth5QL5cCLo51A7TQGiTZLjSfBLqhduqvZI2h0vj77QSo8W4IcU9cfOOdqvdMTplzkU0oB6sIXXC2Ah4DBVPiuHNkH4sPgQx"
       GRAYLOG_ROOT_PASSWORD_SHA2: "13495ea7eaa06c178023416e14c12b9fca2236eb1c83097662d3ad626cc60904"
       GRAYLOG_HTTP_EXTERNAL_URI: "http://0.0.0.0:9000/"
-      #GRAYLOG_HTTP_BIND_ADDRESS: "0.0.0.0:9001"
       GRAYLOG_HTTP_PUBLISH_URI: http://graylog2:9000/
       GRAYLOG_ELASTICSEARCH_HOSTS: "http://opensearch1:9200,http://opensearch2:9200"
       GRAYLOG_MONGODB_URI: "mongodb://mongodb1:27017,mongodb2:27017,mongodb3:27017/graylog?replicaSet=rs1"
-    ports:
-      - "9001:9001"         # Graylog web interface and REST API
-      - "1515:1514"         # Syslog TCP
-      - "1515:1514/udp"     # Syslog UDP
-      - "12202:12201"       # GELF TCP
-      - "12202:12201/udp"   # GELF UDP
+    #ports:
+    #  - "9001:9001"         # Graylog web interface and REST API
+    #  - "1515:1514"         # Syslog TCP
+    #  - "1515:1514/udp"     # Syslog UDP
+    #  - "12202:12201"       # GELF TCP
+    #  - "12202:12201/udp"   # GELF UDP
     volumes:
       - "graylog-data-02:/usr/share/graylog/data/data"
       - "graylog-journal-02:/usr/share/graylog/data/journal"
